@@ -1,0 +1,110 @@
+# 陵水县人民医院慢病管理系统 - Docker Compose 配置
+# 生产部署一键启动
+
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: slow_disease_postgres
+    environment:
+      POSTGRES_DB: slow_disease
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres123}
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # SQLite seed data migration handled by app startup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - slow_disease_network
+
+  # Redis 缓存 (可选，用于性能优化)
+  redis:
+    image: redis:7-alpine
+    container_name: slow_disease_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - slow_disease_network
+
+  # 后端 API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: slow_disease_backend
+    environment:
+      # 数据库配置
+      DATABASE_URL: postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres123}@postgres:5432/slow_disease
+      # JWT 配置
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      # 加密配置
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-encryption-key}
+      # 环境
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - slow_disease_network
+    command: ["gunicorn", "app.main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--access-logfile", "-", "--error-logfile", "-"]
+
+  # 前端 (生产构建)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: slow_disease_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - slow_disease_network
+
+  # Nginx 反向代理 (可选，用于统一入口)
+  nginx:
+    image: nginx:alpine
+    container_name: slow_disease_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - slow_disease_network
+    profiles:
+      - production  # 默认不启动，需要时使用 --profile production
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  slow_disease_network:
+    driver: bridge

@@ -1,0 +1,138 @@
+<template>
+  <el-container class="layout-container">
+    <!-- 侧边栏 -->
+    <el-aside :width="isCollapse ? '64px' : '220px'" class="sidebar">
+      <div class="logo">
+        <h2 v-if="!isCollapse">慢病管理系统</h2>
+        <h2 v-else>慢病</h2>
+      </div>
+      <el-menu
+        :default-active="activeMenu"
+        :collapse="isCollapse"
+        router
+        background-color="#304156"
+        text-color="#bfcbd9"
+        active-text-color="#409EFF"
+      >
+        <el-menu-item index="/patients">
+          <span>患者管理</span>
+        </el-menu-item>
+        <el-menu-item index="/followups">
+          <span>随访记录</span>
+        </el-menu-item>
+        <el-menu-item index="/referrals">
+          <span>双向转诊</span>
+        </el-menu-item>
+        <el-menu-item index="/assessments">
+          <span>年度评估</span>
+        </el-menu-item>
+        <el-menu-item index="/alerts">
+          <span>预警中心</span>
+        </el-menu-item>
+        <el-sub-menu index="tcm">
+          <template #title><span>中医管理</span></template>
+          <el-menu-item index="/tcm">中医档案</el-menu-item>
+        </el-sub-menu>
+        <el-sub-menu index="emergency">
+          <template #title><span>急救联动</span></template>
+          <el-menu-item index="/emergency">急救记录</el-menu-item>
+        </el-sub-menu>
+        <el-menu-item index="/self-reports">
+          <span>患者自报</span>
+        </el-menu-item>
+        <el-menu-item index="/reminders">
+          <span>随访提醒</span>
+        </el-menu-item>
+        <el-menu-item index="/wechat">
+          <span>微信绑定</span>
+        </el-menu-item>
+      </el-menu>
+    </el-aside>
+
+    <!-- 主内容区 -->
+    <el-container>
+      <el-header class="header">
+        <div class="header-left">
+          <el-icon class="collapse-btn" @click="isCollapse = !isCollapse">折叠</el-icon>
+        </div>
+        <div class="header-right">
+          <span>{{ userName }}</span>
+          <el-button type="danger" size="small" @click="handleLogout">退出登录</el-button>
+        </div>
+      </el-header>
+      <el-main class="main-content">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const isCollapse = ref(false)
+
+const activeMenu = computed(() => route.path)
+const userName = computed(() => {
+  const userStr = localStorage.getItem('user')
+  if (userStr) {
+    try { return JSON.parse(userStr).name || '用户' } catch { return '用户' }
+  }
+  return '未登录'
+})
+
+function handleLogout() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  router.push('/login')
+}
+</script>
+
+<style scoped>
+.layout-container {
+  height: 100vh;
+}
+.sidebar {
+  background-color: #304156;
+  transition: width 0.3s;
+  overflow: hidden;
+}
+.logo {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  border-bottom: 1px solid #4a5568;
+}
+.logo h2 {
+  margin: 0;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e6e6e6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+.collapse-btn {
+  cursor: pointer;
+  font-size: 18px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.main-content {
+  background: #f5f7fa;
+  padding: 20px;
+}
+</style>

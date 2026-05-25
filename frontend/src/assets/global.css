@@ -1,0 +1,311 @@
+/* ========================================
+   慢病管理系统 - 全局美化样式
+   ======================================== */
+
+:root {
+  /* 主色调 - 医疗蓝 */
+  --primary: #2E6BE6;
+  --primary-light: #5B8DEF;
+  --primary-lighter: #E8F0FE;
+  --primary-dark: #1A4DB8;
+
+  /* 功能色 */
+  --success: #34C759;
+  --warning: #FF9500;
+  --danger: #FF3B30;
+  --info: #8E8E93;
+
+  /* 中性色 */
+  --text-primary: #1D1D1F;
+  --text-regular: #424245;
+  --text-secondary: #86868B;
+  --text-placeholder: #C7C7CC;
+
+  /* 背景色 */
+  --bg-page: #F5F5F7;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F5F5F7;
+  --bg-sidebar: #1A1D23;
+
+  /* 边框 */
+  --border-color: #E5E5EA;
+  --border-radius: 12px;
+  --border-radius-sm: 8px;
+  --border-radius-xs: 6px;
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 4px rgba(0, 0, 0, 0.04);
+
+  /* 过渡 */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+/* 全局重置 */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-page);
+}
+
+/* ========================================
+   Element Plus 全局覆盖
+   ======================================== */
+
+/* 卡片美化 */
+.el-card {
+  border: none !important;
+  border-radius: var(--border-radius) !important;
+  box-shadow: var(--shadow-card) !important;
+  transition: box-shadow var(--transition-normal) !important;
+}
+
+.el-card:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--border-color) !important;
+  padding: 16px 20px !important;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.el-card__body {
+  padding: 20px !important;
+}
+
+/* 按钮美化 */
+.el-button--primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 500 !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.el-button--primary:hover {
+  background: var(--primary-light) !important;
+  border-color: var(--primary-light) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 107, 230, 0.3) !important;
+}
+
+.el-button--success {
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+.el-button--danger {
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+.el-button {
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 500 !important;
+}
+
+/* 表格美化 */
+.el-table {
+  --el-table-border-color: var(--border-color);
+  --el-table-header-bg-color: #F8F9FA;
+  border-radius: var(--border-radius-sm) !important;
+  overflow: hidden;
+}
+
+.el-table th.el-table__cell {
+  background: #F8F9FA !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.el-table td.el-table__cell {
+  color: var(--text-regular);
+  font-size: 14px;
+}
+
+.el-table__row:hover > td {
+  background: var(--primary-lighter) !important;
+}
+
+/* 标签美化 */
+.el-tag {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  border: none !important;
+  padding: 0 10px !important;
+}
+
+/* 输入框美化 */
+.el-input__wrapper {
+  border-radius: var(--border-radius-sm) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--primary-light) inset !important;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 2px var(--primary) inset !important;
+}
+
+/* 下拉选择框 */
+.el-select .el-input__wrapper {
+  border-radius: var(--border-radius-sm) !important;
+}
+
+/* 对话框美化 */
+.el-dialog {
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 20px 24px 16px !important;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.el-dialog__title {
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+}
+
+.el-dialog__body {
+  padding: 24px !important;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px 20px !important;
+  border-top: 1px solid var(--border-color);
+}
+
+/* 分页美化 */
+.el-pagination {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.el-pagination .el-pager li {
+  border-radius: var(--border-radius-xs) !important;
+  font-weight: 500 !important;
+}
+
+.el-pagination .el-pager li.is-active {
+  background: var(--primary) !important;
+}
+
+/* 表单美化 */
+.el-form-item__label {
+  font-weight: 500 !important;
+  color: var(--text-regular) !important;
+}
+
+/* Switch 美化 */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--success) !important;
+  border-color: var(--success) !important;
+}
+
+/* 进度条美化 */
+.el-progress-bar__outer {
+  border-radius: 8px !important;
+}
+
+.el-progress-bar__inner {
+  border-radius: 8px !important;
+}
+
+/* Message 提示美化 */
+.el-message {
+  border-radius: var(--border-radius-sm) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* 通用页面容器 */
+.page-container {
+  padding: 24px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+}
+
+/* 搜索栏 */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 卡片头部 */
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header-row h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 空状态 */
+.el-empty__description p {
+  color: var(--text-secondary) !important;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C7C7CC;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8E8E93;
+}
+
+/* 动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.3s ease forwards;
+}

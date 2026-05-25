@@ -1,0 +1,437 @@
+# 陵水县人民医院慢病管理系统 - GitHub Actions CI/CD 流水线
+# 自动测试、构建、推送镜像、部署到生产环境
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:  # 手动触发
+
+env:
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/slow-disease-backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/slow-disease-frontend
+
+jobs:
+  # ── Job 1: 代码质量检查 ─────────────────
+  lint:
+    name: 代码质量检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装 Python 依赖
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install flake8 black isort mypy pylint
+
+      - name: Python 代码检查 (flake8)
+        run: |
+          cd backend
+          flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Python 代码格式化检查 (black)
+        run: |
+          cd backend
+          black --check app/ || (echo "❌ 代码未格式化，请运行: black app/" && exit 1)
+
+      - name: Python 类型检查 (mypy)
+        run: |
+          cd backend
+          mypy app/ --ignore-missing-imports || true
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装前端依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: TypeScript 类型检查
+        run: |
+          cd frontend
+          npm run type-check || true
+
+      - name: ESLint 代码检查
+        run: |
+          cd frontend
+          npm run lint || true
+
+  # ── Job 2: 后端测试 ─────────────────
+  test-backend:
+    name: 后端测试
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: test_slow_disease
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 安装依赖
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: 运行数据库迁移
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_slow_disease
+          SECRET_KEY: test-secret-key
+          ENCRYPTION_KEY: test-encryption-key-1234567890
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: 运行测试
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_slow_disease
+          SECRET_KEY: test-secret-key
+          ENCRYPTION_KEY: test-encryption-key-1234567890
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          pytest tests/ -v --tb=short --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: 上传测试覆盖率
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          fail_ci_if_error: false
+
+  # ── Job 3: 前端测试 ─────────────────
+  test-frontend:
+    name: 前端测试
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 运行单元测试
+        run: |
+          cd frontend
+          npm run test:unit || true
+
+      - name: 构建前端
+        run: |
+          cd frontend
+          npm run build
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+  # ── Job 4: 构建 Docker 镜像 ─────────────────
+  build-docker:
+    name: 构建 Docker 镜像
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    outputs:
+      backend-image: ${{ steps.meta-backend.outputs.tags }}
+      frontend-image: ${{ steps.meta-frontend.outputs.tags }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录容器注册表
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取 Docker 元数据 (后端)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: 构建并推送后端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 提取 Docker 元数据 (前端)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: 构建并推送前端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Job 5: 部署到测试环境 ─────────────────
+  deploy-staging:
+    name: 部署到测试环境
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 部署到测试服务器
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/slow_disease_system
+            git pull origin develop
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+            docker-compose ps
+            echo "✅ 测试环境部署完成"
+
+      - name: 健康检查
+        run: |
+          sleep 30
+          curl -f http://${{ secrets.STAGING_HOST }}:8000/health || (echo "❌ 健康检查失败" && exit 1)
+          echo "✅ 健康检查通过"
+
+      - name: 通知部署结果
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "测试环境部署${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}"
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ── Job 6: 部署到生产环境 ─────────────────
+  deploy-production:
+    name: 部署到生产环境
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 创建部署备份
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/slow_disease_system
+            # 备份数据库
+            docker-compose exec -T postgres pg_dump -U postgres slow_disease | gzip > backups/backup_$(date +%Y%m%d_%H%M%S).sql.gz
+            echo "✅ 数据库备份完成"
+            # 备份配置文件
+            cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
+
+      - name: 部署到生产服务器
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/slow_disease_system
+            # 拉取最新代码
+            git pull origin main
+            # 拉取最新镜像
+            docker-compose pull
+            # 执行数据库迁移
+            docker-compose exec -T backend alembic upgrade head
+            # 重启服务
+            docker-compose up -d --remove-orphans
+            # 清理旧镜像
+            docker image prune -f
+            echo "✅ 生产环境部署完成"
+
+      - name: 健康检查
+        run: |
+          sleep 60
+          curl -f https://${{ secrets.PRODUCTION_DOMAIN }}/health || (echo "❌ 健康检查失败" && exit 1)
+          echo "✅ 健康检查通过"
+
+      - name: 通知部署结果
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "生产环境部署${{ job.status == 'success' && '✅ 成功' || '❌ 失败' }}"
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ── Job 7: 集成测试 (E2E) ─────────────────
+  e2e-tests:
+    name: E2E 集成测试
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装 Playwright
+        run: |
+          cd frontend
+          npm ci
+          npx playwright install --with-deps
+
+      - name: 运行 E2E 测试
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: http://${{ secrets.STAGING_HOST }}:3000
+        run: |
+          cd frontend
+          npm run test:e2e || true
+
+      - name: 上传测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+
+  # ── Job 8: 性能测试 ─────────────────
+  performance-tests:
+    name: 性能测试
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 k6
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D39AF167F5F9186B97E
+          echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: 运行性能测试
+        env:
+          BASE_URL: http://${{ secrets.STAGING_HOST }}:8000
+        run: |
+          k6 run --out json=results.json frontend/tests/performance/load_test.js
+          k6 run frontend/tests/performance/stress_test.js
+
+      - name: 上传性能测试结果
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results
+          path: results.json
+
+# ── 辅助 Job: 通知 ─────────────────
+  notify:
+    name: 通知
+    runs-on: ubuntu-latest
+    needs: [lint, test-backend, test-frontend]
+    if: always()
+    steps:
+      - name: 发送 Slack 通知
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ contains(needs.*.result, 'failure') && 'failure' || 'success' }}
+          text: |
+            CI/CD 流水线${{ contains(needs.*.result, 'failure') && '❌ 失败' || '✅ 成功' }}
+            提交: ${{ github.sha }}
+            分支: ${{ github.ref }}
+            作者: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
