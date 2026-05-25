@@ -1,2 +1,46 @@
-web: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
-release: cd backend && alembic upgrade head
+# Render 部署配置 - 陵水县人民医院慢病管理系统
+# 文档: https://render.com/docs/deploying-static-sites
+
+databases:
+  - name: slow-disease-db
+    plan: free
+    databaseName: slow_disease
+    ipAllowList: []
+
+services:
+  # 后端 API + 前端 (单服务架构)
+  - type: web
+    name: slow-disease-backend
+    plan: free
+    region: singapore
+    repo: https://github.com/Jensen1657/lingshui-chronic-disease-system
+    branch: main
+    rootDir: 
+    buildCommand: |
+      pip install -r backend/requirements.txt
+      cd frontend && npm install && npm run build
+    preDeployCommand: |
+      cd backend && alembic upgrade head 2>/dev/null || true
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "480"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: REDIS_URL
+        value: ""
+      - key: CORS_ORIGINS
+        # 替换 YOUR_RENDER_BACKEND_URL 为实际部署的 URL
+        value: "https://slow-disease-backend.onrender.com,http://localhost:3000,http://localhost"
+      - key: VITE_API_BASE_URL
+        value: "https://slow-disease-backend.onrender.com"
+      - key: PYTHON_VERSION
+        value: "3.11.4"
