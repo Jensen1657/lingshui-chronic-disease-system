@@ -5,6 +5,9 @@ FastAPI 主应用入口
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 from app.config import settings
 from app.db.session import engine, Base
 from app.middleware.audit_log import AuditLogMiddleware
@@ -113,6 +116,23 @@ from app.api import user_admin
 app.include_router(user_admin.router, prefix="/api/v1/admin", tags=["用户管理"])
 
 # 所有后端 API 路由已注册完毕
+
+# ============ 前端静态文件服务（生产环境） ============
+import os
+if os.getenv("ENVIRONMENT") == "production":
+    # 前端构建产物目录（相对于 backend/）
+    frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
+    if frontend_dist.exists():
+        # 服务静态文件（JS/CSS/图片等）
+        app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+        
+        # SPA 兜底：所有其他 GET 请求返回 index.html
+        @app.get("/{full_path:path}")
+        async def serve_spa(full_path: str):
+            index_file = frontend_dist / "index.html"
+            if index_file.exists():
+                return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
+            return {"error": "前端未构建，请运行 npm run build"}
 
 if __name__ == "__main__":
     import uvicorn
