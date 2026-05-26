@@ -6,10 +6,6 @@ from sqlalchemy import (
     Column, String, Integer, Boolean, DateTime, Date, Text, Numeric,
     ForeignKey, Index, CheckConstraint, UniqueConstraint, JSON, func, text
 )
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-except ImportError:
-    JSONB = JSON  # SQLite fallback
 from sqlalchemy.orm import relationship, DeclarativeBase
 from datetime import datetime
 import uuid
@@ -115,7 +111,7 @@ class Patient(Base):
     address = Column(Text)
     village_code = Column(String(12), ForeignKey("dim_region.region_code"))
     manage_org_code = Column(String(50), nullable=False)
-    disease_list = Column(JSONB, nullable=False, default=list)
+    disease_list = Column(JSON, nullable=False, default=list)
     risk_level = Column(String(20))
     is_active = Column(Boolean, default=True)
     empi_status = Column(String(20), default='ACTIVE')
@@ -126,7 +122,7 @@ class Patient(Base):
     __table_args__ = (
         Index('idx_patient_village', village_code),
         Index('idx_patient_org', manage_org_code),
-        Index('idx_patient_disease', disease_list, postgresql_using='gin'),
+        Index('idx_patient_disease', disease_list),
         Index('idx_patient_id_card_hash', id_card_hash),
     )
 
@@ -538,7 +534,7 @@ class AlertRecord(Base):
     __table_args__ = (
         Index('idx_alert_org', org_code, created_at),
         Index('idx_alert_patient', patient_id, created_at),
-        Index('idx_alert_unhandled', is_handled, created_at, postgresql_where=(is_handled == False)),
+        Index('idx_alert_unhandled', is_handled, created_at),
     )
 
 
@@ -597,7 +593,7 @@ class FollowupReminder(Base):
     # Indexes
     __table_args__ = (
         Index('idx_reminder_patient', patient_id, remind_at),
-        Index('idx_reminder_unsent', is_sent, remind_at, postgresql_where=(is_sent == False)),
+        Index('idx_reminder_unsent', is_sent, remind_at),
     )
 
 
@@ -689,5 +685,5 @@ class EmergencyAlert(Base):
     __table_args__ = (
         Index('idx_emergency_patient', patient_id, trigger_at),
         Index('idx_emergency_status', status, trigger_at),
-        Index('idx_emergency_unsent', status, trigger_at, postgresql_where=(status == 'ACTIVATED')),
+        Index('idx_emergency_unsent', status, trigger_at),
     )

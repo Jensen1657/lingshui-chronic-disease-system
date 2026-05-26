@@ -261,7 +261,6 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useSelfReportStore } from '@/stores/selfReport'
 import { usePatientStore } from '@/stores/patient'
-import { ElMessage } from 'element-plus'
 import type { SelfReportRecord, SelfReportCreate, SelfReportUpdate } from '@/types/self-report'
 import type { Patient } from '@/types/patient'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -480,7 +479,7 @@ const handleSubmit = async () => {
     handleClose()
   } catch (error) {
     if (error !== false) {
-      ElMessage.error('操作失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

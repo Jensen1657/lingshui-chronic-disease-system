@@ -47,7 +47,6 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAssessmentStore } from '@/stores/assessment';
-import { ElMessage, ElMessageBox } from 'element-plus';
 import type { Assessment } from '@/types/assessment';
 
 const route = useRoute();
@@ -96,7 +95,7 @@ const fetchRecord = async () => {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true;
     } else {
-      ElMessage.error(error.message || '获取评估详情失败');
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false;
@@ -122,7 +121,7 @@ const handleDelete = async () => {
     goBack();
   } catch (error: any) {
     if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败');
+      // 错误已由 request.ts 拦截器统一提示
     }
   }
 };

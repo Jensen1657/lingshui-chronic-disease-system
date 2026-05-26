@@ -37,7 +37,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useEmergencyStore } from '@/stores/emergency'
 import type { EmergencyRecord } from '@/types/emergency'
 
@@ -65,7 +64,7 @@ async function loadRecord() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载急救记录失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -97,7 +96,7 @@ async function handleActivate() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('启动急救流程失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -121,7 +120,7 @@ async function handleComplete() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('操作失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -142,7 +141,7 @@ async function handleCancel() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('操作失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

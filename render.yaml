@@ -8,23 +8,23 @@ databases:
     ipAllowList: []
 
 services:
-  # 后端 API + 前端 (单服务架构)
+  # 后端 Web Service
   - type: web
-    name: slow-disease-backend
+    name: slow-disease-api
     plan: free
     region: singapore
     repo: https://github.com/Jensen1657/lingshui-chronic-disease-system
     branch: main
-    rootDir: 
-    buildCommand: |
-      pip install -r backend/requirements.txt
-      cd frontend && npm install && npm run build
-    preDeployCommand: |
-      cd backend && alembic upgrade head 2>/dev/null || true
-    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head 2>/dev/null || true
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /docs
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: slow-disease-db
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: ENCRYPTION_KEY
@@ -38,9 +38,18 @@ services:
       - key: REDIS_URL
         value: ""
       - key: CORS_ORIGINS
-        # 替换 YOUR_RENDER_BACKEND_URL 为实际部署的 URL
-        value: "https://slow-disease-backend.onrender.com,http://localhost:3000,http://localhost"
+        value: "https://slow-disease.netlify.app,http://localhost:3000"
+
+  # 前端 Static Site
+  - type: web
+    name: slow-disease-web
+    plan: free
+    region: singapore
+    repo: https://github.com/Jensen1657/lingshui-chronic-disease-system
+    branch: main
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
       - key: VITE_API_BASE_URL
-        value: "https://slow-disease-backend.onrender.com"
-      - key: PYTHON_VERSION
-        value: "3.11.4"
+        value: "https://slow-disease-api.onrender.com"

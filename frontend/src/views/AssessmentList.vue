@@ -116,7 +116,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 import { reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAssessmentStore } from '@/stores/assessment'
-import { ElMessage } from 'element-plus'
 import type { Assessment } from '@/types/assessment'
 
 const router = useRouter()

@@ -1,4 +1,5 @@
 """Redis 缓存工具"""
+import os
 import json
 import redis
 from typing import Optional, Any
@@ -8,18 +9,26 @@ import logging
 logger = logging.getLogger(__name__)
 
 _redis_client: Optional[redis.Redis] = None
+_is_initialized = False
 
 
 def get_redis() -> Optional[redis.Redis]:
     """获取 Redis 连接（单例，连接失败返回 None）"""
-    global _redis_client
-    if _redis_client is not None:
+    global _redis_client, _is_initialized
+    if _is_initialized:
         return _redis_client
+    _is_initialized = True
+    
+    redis_url = os.getenv('REDIS_URL', '')
+    if not redis_url:
+        logger.info("REDIS_URL 未配置，使用无缓存模式")
+        _redis_client = None
+        return None
+    
     try:
-        _redis_client = redis.Redis(
-            host='localhost',
-            port=6379,
-            db=0,
+        # Render 提供的 REDIS_URL 格式: redis://host:port
+        _redis_client = redis.from_url(
+            redis_url,
             decode_responses=True,
             socket_connect_timeout=2,
             socket_timeout=2,

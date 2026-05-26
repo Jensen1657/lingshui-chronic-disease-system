@@ -85,7 +85,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { tcmApi } from '@/api/tcm'
 import { patientApi } from '@/api/patient'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -175,7 +174,7 @@ const handleSubmit = async () => {
     router.push('/tcm')
   } catch (e: any) {
     const msg = e?.response?.data?.detail || e?.message || '操作失败'
-    ElMessage.error(msg)
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     submitting.value = false
   }

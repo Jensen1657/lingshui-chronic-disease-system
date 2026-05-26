@@ -28,7 +28,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useFollowupStore } from '@/stores/followup'
 import type { FollowupRecord } from '@/types/followup'
 
@@ -66,7 +65,7 @@ async function loadRecord() {
     if (status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载随访记录失败: ' + (status || '未知错误'))
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

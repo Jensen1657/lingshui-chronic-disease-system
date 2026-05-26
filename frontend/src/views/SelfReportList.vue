@@ -143,7 +143,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useSelfReportStore } from '@/stores/selfReport'
-import { ElMessage } from 'element-plus'
 import SelfReportForm from '@/components/SelfReportForm.vue'
 import type { SelfReportRecord } from '@/types/self-report'
 
@@ -218,7 +217,7 @@ const handleVerifySubmit = async () => {
     verifyDialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     verifyLoading.value = false
   }

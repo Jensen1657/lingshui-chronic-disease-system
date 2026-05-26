@@ -38,7 +38,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useWechatStore } from '@/stores/wechat'
 import type { WechatRecord } from '@/types/wechat'
 
@@ -66,7 +65,7 @@ async function loadRecord() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载微信记录失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -95,7 +94,7 @@ async function handleSendNotification() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('发送通知失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -116,7 +115,7 @@ async function handleUnbind() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('解绑失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -137,7 +136,7 @@ async function handleDelete() {
     router.push('/wechat')
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

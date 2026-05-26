@@ -117,7 +117,6 @@ import {
   HomeFilled, User, Position, Bell, DataAnalysis,
   Document, FirstAidKit, Setting, Tickets
 } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()

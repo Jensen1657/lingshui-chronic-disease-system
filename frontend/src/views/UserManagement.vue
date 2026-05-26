@@ -135,7 +135,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import request from '@/api/request'
 
@@ -210,7 +209,7 @@ async function loadData() {
     users.value = res.items || []
     total.value = res.total || 0
   } catch(e: any) {
-    ElMessage.error(e?.response?.data?.detail || '加载用户列表失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -273,7 +272,7 @@ async function handleSubmit() {
     dialogVisible.value = false
     loadData()
   } catch(e: any) {
-    ElMessage.error(e?.response?.data?.detail || '操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     submitting.value = false
   }
@@ -287,7 +286,9 @@ async function toggleStatus(row: any) {
     ElMessage.success(`已${action}`)
     loadData()
   } catch(e: any) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.detail || '操作失败')
+    if (e !== 'cancel') {
+      // 错误已由 request.ts 拦截器统一提示
+    }
   }
 }
 
@@ -315,7 +316,7 @@ async function handleResetPwd() {
     ElMessage.success('密码重置成功')
     pwdDialogVisible.value = false
   } catch(e: any) {
-    ElMessage.error(e?.response?.data?.detail || '重置失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     pwdSubmitting.value = false
   }
@@ -328,7 +329,9 @@ async function deleteUser(row: any) {
     ElMessage.success('已删除')
     loadData()
   } catch(e: any) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.detail || '删除失败')
+    if (e !== 'cancel') {
+      // 错误已由 request.ts 拦截器统一提示
+    }
   }
 }
 

@@ -92,7 +92,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useWechatStore } from '@/stores/wechat'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import WechatForm from '@/components/WechatForm.vue'
 import type { WechatBinding } from '@/types/wechat'
 
@@ -127,7 +126,7 @@ const handleActivate = async (row: WechatBinding) => {
     ElMessage.success('激活成功')
     loadData()
   } catch (error) {
-    ElMessage.error('激活失败')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 
@@ -137,7 +136,7 @@ const handleDeactivate = async (row: WechatBinding) => {
     ElMessage.success('停用成功')
     loadData()
   } catch (error) {
-    ElMessage.error('停用失败')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 
@@ -153,7 +152,7 @@ const handleUnbind = async (row: WechatBinding) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('解绑失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   }
 }

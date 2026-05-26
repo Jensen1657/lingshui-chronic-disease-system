@@ -34,5 +34,15 @@ def get_settings() -> Settings:
     return Settings()
 
 
-# 全局 settings 实例（main.py 等模块直接导入使用）
-settings = get_settings()
+# 惰性加载 settings（避免模块导入时触发 pydantic-settings Python 3.9 bug）
+class _LazySettings:
+    def __getattr__(self, name: str):
+        return getattr(get_settings(), name)
+    def __setattr__(self, name: str, value):
+        setattr(get_settings(), name, value)
+    def __repr__(self):
+        return repr(get_settings())
+    def __dir__(self):
+        return dir(get_settings())
+
+settings = _LazySettings()  # type: ignore[assignment]

@@ -117,7 +117,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePatientStore } from '@/stores/patient'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import PatientForm from '@/components/PatientForm.vue'
 import type { Patient } from '@/types/patient'
 
@@ -163,7 +162,7 @@ const handleDelete = async (row: Patient) => {
     ElMessage.success('删除成功')
     loadData()
   } catch (error: any) {
-    if (error !== 'cancel') ElMessage.error('删除失败')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 
@@ -234,7 +233,7 @@ const handleExport = async () => {
     
     ElMessage.success('导出成功')
   } catch (error: any) {
-    ElMessage.error(error.message || '导出失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     exporting.value = false
   }

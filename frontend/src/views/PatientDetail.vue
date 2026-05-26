@@ -125,7 +125,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { usePatientStore } from '@/stores/patient'
 import { patientApi } from '@/api/patient'
 import { followupApi } from '@/api/followup'
@@ -167,7 +166,7 @@ async function loadPatient() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载患者信息失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

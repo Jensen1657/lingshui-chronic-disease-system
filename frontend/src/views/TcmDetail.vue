@@ -57,7 +57,6 @@
 <script setup lang="tsx">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useTcmStore } from '@/stores/tcm'
 import type { TcmRecord } from '@/types/tcm'
 
@@ -85,7 +84,7 @@ async function loadRecord() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载中医记录失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

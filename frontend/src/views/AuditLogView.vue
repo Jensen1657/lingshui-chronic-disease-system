@@ -160,7 +160,6 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import { getAuditLogs, getAuditStats } from '@/api/audit-log'
 import type { AuditLog, AuditStats, AuditLogQuery } from '@/types/audit-log'
 import request from '@/api/request'
@@ -205,7 +204,7 @@ const loadData = async () => {
     total.value = logsRes.total
     stats.value = statsRes
   } catch (error) {
-    ElMessage.error('加载审计日志失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -266,7 +265,7 @@ const handleExport = async () => {
     URL.revokeObjectURL(link.href)
     ElMessage.success(`成功导出 ${res.totalRecords} 条日志`)
   } catch (error) {
-    ElMessage.error('导出失败，请检查权限或日期范围')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }

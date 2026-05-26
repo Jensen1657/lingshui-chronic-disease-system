@@ -58,7 +58,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -103,7 +102,7 @@ const handleLogin = async () => {
     router.push('/')
   } catch (error: any) {
     console.error('登录失败:', error)
-    ElMessage.error(error.response?.data?.detail || '登录失败，请检查用户名和密码')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 </script>

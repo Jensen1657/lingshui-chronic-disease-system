@@ -39,7 +39,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAlertStore } from '@/stores/alert'
 import type { AlertRecord } from '@/types/alert'
 
@@ -67,7 +66,7 @@ async function loadRecord() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载预警记录失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -85,7 +84,7 @@ async function handleMarkAsRead() {
     ElMessage.success('已标记为已读')
     await loadRecord()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -109,7 +108,7 @@ async function handleProcess() {
     await loadRecord()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('操作失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false

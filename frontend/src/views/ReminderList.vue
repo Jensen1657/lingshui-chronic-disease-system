@@ -113,7 +113,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useReminderStore } from '@/stores/reminder'
-import { ElMessage, ElMessageBox } from 'element-plus'
 import ReminderForm from '@/components/ReminderForm.vue'
 import type { ReminderRecord } from '@/types/reminder'
 
@@ -161,7 +160,7 @@ const handleSend = async (row: ReminderRecord) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('发送失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   }
 }
@@ -178,7 +177,7 @@ const handleDelete = async (row: ReminderRecord) => {
     loadData()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   }
 }

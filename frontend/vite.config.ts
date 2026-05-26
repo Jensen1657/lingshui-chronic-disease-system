@@ -18,7 +18,9 @@ export default defineConfig({
     }),
     // Auto-import Vue APIs (ref, computed, etc.) and ElementPlus resolvers
     AutoImport({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [
+        ElementPlusResolver({ import: true, directives: true }),
+      ],
       imports: ['vue', 'vue-router', 'pinia'],
       dts: 'src/auto-imports.d.ts',
     }),

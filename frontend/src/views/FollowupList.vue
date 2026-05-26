@@ -114,7 +114,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFollowupStore } from '@/stores/followup'
-import { ElMessage } from 'element-plus'
 import type { FollowupRecord } from '@/types/followup'
 
 const router = useRouter()
@@ -208,7 +207,7 @@ const handleExport = async () => {
     
     ElMessage.success('导出成功')
   } catch (error: any) {
-    ElMessage.error(error.message || '导出失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     exporting.value = false
   }

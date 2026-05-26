@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { ElMessage } from 'element-plus';
 
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -120,7 +119,22 @@ request.interceptors.response.use(
           window.location.href = '/login';
         }
       }
-      // 其他错误（403/404/422/5xx）由各页面 catch 自行处理，避免双重提示
+
+      // 统一处理非 401 的业务错误，只弹一次，页面 catch 不再重复弹
+      if (status !== 401) {
+        const detail = error.response.data?.detail
+        let msg = '操作失败，请稍后重试';
+        if (typeof detail === 'string') {
+          msg = detail;
+        } else if (Array.isArray(detail)) {
+          // FastAPI validation error: [{loc, msg}]
+          msg = detail.map((d: any) => d.msg).join('; ');
+        }
+        ElMessage.error(msg);
+      }
+    } else {
+      // 网络错误
+      ElMessage.error('网络连接失败，请检查网络');
     }
     return Promise.reject(error);
   }

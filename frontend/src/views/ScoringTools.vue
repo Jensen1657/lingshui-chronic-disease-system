@@ -185,7 +185,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import request from '@/api/request'
 
 const loading = ref(false)
@@ -313,7 +312,7 @@ async function calculate() {
     result.value = response
     ElMessage.success('评分完成')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.detail || '评分失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }

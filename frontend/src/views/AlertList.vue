@@ -127,7 +127,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { reactive, onMounted } from 'vue'
 import { useAlertStore } from '@/stores/alert'
-import { ElMessage } from 'element-plus'
 import type { Alert } from '@/types/alert'
 
 const alertStore = useAlertStore()

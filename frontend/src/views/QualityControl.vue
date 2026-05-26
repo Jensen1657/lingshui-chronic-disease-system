@@ -226,7 +226,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import request from '@/api/request'
 
 const loading = ref(false)
@@ -317,7 +316,7 @@ async function toggleRule(rule: any) {
     ElMessage.success('规则状态已更新')
   } catch (error) {
     rule.is_active = !rule.is_active // 回滚
-    ElMessage.error('更新失败')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 
@@ -346,7 +345,7 @@ async function runFullCheck() {
     
     ElMessage.success('检查完成')
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.detail || '检查失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -364,7 +363,7 @@ async function checkDrugInteractions() {
     })
     drugResult.value = response
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.detail || '检查失败')
+    // 错误已由 request.ts 拦截器统一提示
   }
 }
 
@@ -383,7 +382,7 @@ async function loadAlertRules() {
     alertRules.value = response || []
     stats.value.totalRules = alertRules.value.length
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.detail || '加载预警规则失败')
+    // 错误已由 request.ts 拦截器统一提示
     alertRules.value = []
   } finally {
     dataLoading.value = false
@@ -395,7 +394,7 @@ async function loadReferralCriteria() {
     const response = await request.get('/v1/quality-control/rules/referral-criteria')
     referralCriteria.value = response || []
   } catch (error: any) {
-    ElMessage.error(error.response?.data?.detail || '加载转诊标准失败')
+    // 错误已由 request.ts 拦截器统一提示
     referralCriteria.value = []
   }
 }

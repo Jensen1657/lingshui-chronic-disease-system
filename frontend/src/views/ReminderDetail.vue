@@ -42,7 +42,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useReminderStore } from '@/stores/reminder'
 import type { ReminderRecord } from '@/types/reminder'
 
@@ -70,7 +69,7 @@ async function loadRecord() {
     if (error?.response?.status === 404 || error?.status === 404) {
       notFound.value = true
     } else {
-      ElMessage.error('加载提醒记录失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
@@ -92,7 +91,7 @@ async function handleMarkSent() {
     ElMessage.success('已标记为已发送')
     await loadRecord()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }
@@ -105,7 +104,7 @@ async function handleMarkCompleted() {
     ElMessage.success('已标记为已完成')
     await loadRecord()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     loading.value = false
   }

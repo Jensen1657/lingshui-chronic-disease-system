@@ -127,7 +127,6 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { patientApi } from '@/api/patient'
 
@@ -226,7 +225,7 @@ async function handleSubmit() {
       emit('success')
       emit('update:visible', false)
     } catch (error) {
-      ElMessage.error('操作失败，请重试')
+      // 错误已由 request.ts 拦截器统一提示
     } finally {
       loading.value = false
     }

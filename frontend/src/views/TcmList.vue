@@ -137,7 +137,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useTcmStore } from '@/stores/tcm'
-import { ElMessage } from 'element-plus'
 import TcmForm from '@/components/TcmForm.vue'
 import type { TcmRecord } from '@/types/tcm'
 
@@ -200,7 +199,7 @@ const handleCompleteSubmit = async () => {
     completeDialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     completeLoading.value = false
   }

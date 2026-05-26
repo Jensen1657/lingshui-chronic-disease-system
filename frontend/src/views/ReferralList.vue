@@ -105,7 +105,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 import { reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useReferralStore } from '@/stores/referral'
-import { ElMessage } from 'element-plus'
 import type { ReferralRecord } from '@/types/referral'
 
 const router = useRouter()

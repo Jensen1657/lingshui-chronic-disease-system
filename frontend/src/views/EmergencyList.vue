@@ -156,7 +156,6 @@ import TableSkeleton from "@/components/TableSkeleton.vue"
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useEmergencyStore } from '@/stores/emergency'
-import { ElMessage } from 'element-plus'
 import EmergencyForm from '@/components/EmergencyForm.vue'
 import type { EmergencyRecord } from '@/types/emergency'
 
@@ -242,7 +241,7 @@ const handleActionSubmit = async () => {
     actionDialogVisible.value = false
     loadData()
   } catch (error) {
-    ElMessage.error('操作失败')
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     actionLoading.value = false
   }

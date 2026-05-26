@@ -145,7 +145,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { patientApi } from '@/api/patient'
 import type { FormInstance, FormRules } from 'element-plus'
 
@@ -201,7 +200,7 @@ onMounted(async () => {
         notes: data.notes || '',
       })
     } catch (e: any) {
-      ElMessage.error('加载患者数据失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   }
 })
@@ -227,7 +226,7 @@ const handleSubmit = async () => {
     router.push('/patients')
   } catch (e: any) {
     const msg = e?.response?.data?.detail || e?.message || '操作失败'
-    ElMessage.error(msg)
+    // 错误已由 request.ts 拦截器统一提示
   } finally {
     submitting.value = false
   }

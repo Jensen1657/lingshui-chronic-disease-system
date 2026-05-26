@@ -65,7 +65,6 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import { referralApi } from '@/api/referral'
 
 interface ReferralRecord {
@@ -158,7 +157,7 @@ async function handleSubmit() {
     emit('update:modelValue', false)
   } catch (error: any) {
     if (error !== false) {
-      ElMessage.error(isEdit.value ? '修改失败' : '创建失败')
+      // 错误已由 request.ts 拦截器统一提示
     }
   } finally {
     loading.value = false
