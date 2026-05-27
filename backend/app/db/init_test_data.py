@@ -1,12 +1,13 @@
 """
 初始化测试数据 - 陵水县人民医院慢性病管理系统
-（兼容当前模型版本）
+（兼容当前模型版本 2026-05-27）
 """
 import sys
 import os
 from datetime import datetime, date, timedelta
 import random
 import hashlib
+import logging
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/../..')
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
@@ -40,52 +41,53 @@ def init_test_data():
     db = SessionLocal()
 
     try:
-        # 检查是否已初始化（只检查 admin 用户是否存在）
+        # 检查是否已初始化
         existing_admin = db.query(SysUser).filter(SysUser.username == 'admin').first()
         if existing_admin:
-            # 检查是否已有患者数据
-            patient_count = db.query(Patient).count()
-            if patient_count > 0:
-                print(f"测试数据已存在（{patient_count} 个患者），跳过初始化")
+            patient_cnt = db.query(Patient).count()
+            fu_cnt = db.query(FollowupRecord).count()
+            if patient_cnt > 0 and fu_cnt > 0:
+                print(f"测试数据已存在（患者={patient_cnt}, 随访={fu_cnt}），跳过")
                 return
             else:
-                print("admin 用户存在但无患者数据，继续初始化...")
+                print(f"admin 存在但数据不完整（患者={patient_cnt}, 随访={fu_cnt}），继续初始化...")
 
-        # 1. 创建疾病类型字典
+        enc_svc = get_encryption_service()
+
+        # 1. 疾病类型字典
         print("创建疾病类型字典...")
-        diseases = [
-            DimDiseaseType(disease_code='HYPERTENSION', disease_name='原发性高血压', icd10_code='I10', sort_order=1),
-            DimDiseaseType(disease_code='DIABETES', disease_name='2型糖尿病', icd10_code='E11', sort_order=2),
-            DimDiseaseType(disease_code='CORONARY', disease_name='冠心病', icd10_code='I20', sort_order=3),
-            DimDiseaseType(disease_code='STROKE', disease_name='脑卒中', icd10_code='I63', sort_order=4),
-            DimDiseaseType(disease_code='COP', disease_name='慢性阻塞性肺疾病', icd10_code='J44', sort_order=5),
-            DimDiseaseType(disease_code='CKD', disease_name='慢性肾脏病', icd10_code='N18', sort_order=6),
+        disease_defs = [
+            ('HYPERTENSION', '原发性高血压', 'I10', 1),
+            ('DIABETES', '2型糖尿病', 'E11', 2),
+            ('CORONARY', '冠心病', 'I20', 3),
+            ('STROKE', '脑卒中', 'I63', 4),
+            ('COPD', '慢性阻塞性肺疾病', 'J44', 5),
+            ('CKD', '慢性肾脏病', 'N18', 6),
         ]
-        for d in diseases:
-            existing = db.query(DimDiseaseType).filter(DimDiseaseType.disease_code == d.disease_code).first()
-            if not existing:
-                db.add(d)
+        for code, name, icd, order in disease_defs:
+            if not db.query(DimDiseaseType).filter(DimDiseaseType.disease_code == code).first():
+                db.add(DimDiseaseType(disease_code=code, disease_name=name, icd10_code=icd, sort_order=order))
         db.commit()
-        print(f"  ✓ 疾病类型已创建/确认")
+        print("  ✓ 疾病类型就绪")
 
-        # 2. 创建测试账号（如果不存在）
-        print("创建/确认测试账号...")
+        # 2. 测试账号
+        print("创建测试账号...")
         if not existing_admin:
             users = [
                 SysUser(username='admin', password_hash='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918',
-                     real_name='系统管理员', role_code='ADMIN', org_code='469028', is_active=True),
+                       real_name='系统管理员', role_code='ADMIN', org_code='469028', is_active=True),
                 SysUser(username='doctor1', password_hash='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918',
-                     real_name='张医生', role_code='DOCTOR', org_code='469028', is_active=True),
+                       real_name='张医生', role_code='DOCTOR', org_code='469028', is_active=True),
                 SysUser(username='doctor2', password_hash='8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918',
-                     real_name='李医生', role_code='DOCTOR', org_code='469028', is_active=True),
+                       real_name='李医生', role_code='DOCTOR', org_code='469028', is_active=True),
             ]
             db.add_all(users)
             db.commit()
             print(f"  ✓ 创建了 3 个测试账号")
         else:
-            print(f"  ✓ 测试账号已存在")
+            print("  ✓ 测试账号已存在")
 
-        # 3. 创建测试患者（覆盖6类慢病）
+        # 3. 测试患者（含加密字段）
         print("创建测试患者...")
         patients_data = [
             {'id': 'p_0001', 'name': '王建国', 'gender': 'M', 'age': 65, 'phone': '13800138001',
@@ -110,27 +112,19 @@ def init_test_data():
              'id_card': '469028196205101234', 'diseases': ['CKD'], 'risk': '高危'},
         ]
 
+        village_codes = ['469028001', '469028002', '469028003', '469028004']
         patients = []
         for pdata in patients_data:
-            # 加密敏感字段
-            enc_svc = get_encryption_service()
-            id_card_enc = enc_svc.encrypt(pdata['id_card'])
             id_card_hash = hashlib.sha256(pdata['id_card'].encode()).hexdigest()
-            name_enc = enc_svc.encrypt(pdata['name'])
-            phone_enc = enc_svc.encrypt(pdata['phone'])
-            
-            birth_date = date.today() - timedelta(days=pdata['age'] * 365)
-            village_codes = ['469028001', '469028002', '469028003', '469028004']
-            
             patient = Patient(
                 patient_id=pdata['id'],
-                id_card_enc=id_card_enc,
+                id_card_enc=enc_svc.encrypt(pdata['id_card']),
                 id_card_hash=id_card_hash,
-                name_enc=name_enc,
+                name_enc=enc_svc.encrypt(pdata['name']),
                 gender=pdata['gender'],
-                birth_date=birth_date,
+                birth_date=date.today() - timedelta(days=pdata['age'] * 365),
                 age=pdata['age'],
-                phone_enc=phone_enc,
+                phone_enc=enc_svc.encrypt(pdata['phone']),
                 address=f'海南省陵水黎族自治县{["椰林镇","光坡镇","三才镇","英州镇"][len(patients) % 4]}',
                 village_code=random.choice(village_codes),
                 manage_org_code='469028',
@@ -145,57 +139,110 @@ def init_test_data():
         db.commit()
         print(f"  ✓ 创建了 {len(patients)} 个测试患者")
 
-        # 4. 创建随访记录
+        # 4. 专病记录
+        print("创建专病记录...")
+        disease_records = []
+        for p in patients:
+            if 'HYPERTENSION' in p.disease_list:
+                disease_records.append(DiseaseHypertension(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 365)),
+                    risk_stratification=random.choice(['低危', '中危', '高危']),
+                    is_active=True,
+                ))
+            if 'DIABETES' in p.disease_list:
+                disease_records.append(DiseaseDiabetes(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 365)),
+                    who_1999_type='2型',
+                    hba1c_at_diagnosis=round(random.uniform(6.5, 11.0), 1),
+                    is_active=True,
+                ))
+            if 'CORONARY' in p.disease_list:
+                disease_records.append(DiseaseCoronaryHeartDisease(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 730)),
+                    timi_score=random.randint(0, 7),
+                    grace_score=random.randint(0, 140),
+                    is_active=True,
+                ))
+            if 'STROKE' in p.disease_list:
+                disease_records.append(DiseaseStroke(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 365)),
+                    is_active=True,
+                ))
+            if 'COPD' in p.disease_list:
+                disease_records.append(DiseaseCopd(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 365)),
+                    is_active=True,
+                ))
+            if 'CKD' in p.disease_list:
+                disease_records.append(DiseaseCkd(
+                    patient_id=p.patient_id,
+                    diagnosis_date=date.today() - timedelta(days=random.randint(30, 365)),
+                    is_active=True,
+                ))
+        db.add_all(disease_records)
+        db.commit()
+        print(f"  ✓ 创建了 {len(disease_records)} 条专病记录")
+
+        # 5. 随访记录（按正确模型字段）
         print("创建随访记录...")
         followups = []
-        followup_types = ['REGULAR', 'EMERGENCY', 'PHONE']
+        followup_no_map = {}
         for p in patients:
             num_fu = random.randint(1, 3)
             for i in range(num_fu):
                 fu_date = date.today() - timedelta(days=random.randint(0, 180))
+                # followup_no 按患者递增
+                key = p.patient_id
+                followup_no_map[key] = followup_no_map.get(key, 0) + 1
+                
                 fu = FollowupRecord(
                     patient_id=p.patient_id,
+                    disease_code=p.disease_list[0],
+                    followup_no=followup_no_map[key],
+                    followup_type=random.choice(['REGULAR', 'EMERGENCY', 'PHONE']),
                     followup_date=fu_date,
-                    followup_type=random.choice(followup_types),
-                    systolic_pressure=random.randint(120, 170) if 'HYPERTENSION' in p.disease_list else None,
-                    diastolic_pressure=random.randint(70, 100) if 'HYPERTENSION' in p.disease_list else None,
-                    fasting_glucose=round(random.uniform(5.0, 13.0), 1) if 'DIABETES' in p.disease_list else None,
+                    performed_by=2,  # doctor1
+                    org_code='469028',
+                    bp_systolic=random.randint(120, 170) if 'HYPERTENSION' in p.disease_list else None,
+                    bp_diastolic=random.randint(70, 100) if 'HYPERTENSION' in p.disease_list else None,
+                    fbg=round(random.uniform(5.0, 13.0), 1) if 'DIABETES' in p.disease_list else None,
                     hba1c=round(random.uniform(6.0, 10.0), 1) if 'DIABETES' in p.disease_list else None,
                     symptoms=random.choice([None, '无症状', '头晕', '乏力', '胸闷']),
                     medication_adherence=random.choice(['良好', '一般', '差']),
+                    is_controlled=random.choice([True, False]),
                     next_followup_date=fu_date + timedelta(days=random.randint(30, 90)),
-                    is_completed=True,
-                    created_by=2,
                 )
                 followups.append(fu)
                 db.add(fu)
-                db.flush()
+                db.flush()  # 获取 followup_id
 
-                # 创建专病随访
+                # 高血压随访扩展
                 if 'HYPERTENSION' in p.disease_list:
-                    hf = FollowupHypertension(
+                    db.add(FollowupHypertension(
                         followup_id=fu.followup_id,
-                        patient_id=p.patient_id,
-                        blood_pressure_control=random.choice(['达标', '不达标']),
-                        lifestyle_guidance='低盐饮食，适量运动',
-                        created_by=2,
-                    )
-                    db.add(hf)
+                        bp_grade=random.choice(['正常', '正常高值', '1级', '2级', '3级']),
+                        cv_risk_updated=random.choice(['低危', '中危', '高危', None]),
+                        is_urgent_alert=random.choice([True, False]),
+                    ))
 
+                # 糖尿病随访扩展
                 if 'DIABETES' in p.disease_list:
-                    df = FollowupDiabetes(
+                    db.add(FollowupDiabetes(
                         followup_id=fu.followup_id,
-                        patient_id=p.patient_id,
-                        glucose_control=random.choice(['达标', '不达标']),
-                        diet_guidance='控制碳水摄入，定时定量',
-                        created_by=2,
-                    )
-                    db.add(df)
+                        hypoglycemia_event=random.choice([True, False]),
+                        hypoglycemia_count=random.randint(0, 3),
+                        adverse_reaction=random.choice([None, '胃肠道反应', '低血糖']),
+                    ))
 
         db.commit()
         print(f"  ✓ 创建了 {len(followups)} 条随访记录")
 
-        # 5. 创建转诊记录
+        # 6. 转诊记录
         print("创建转诊记录...")
         referrals = []
         for i, p in enumerate(patients[:6]):
@@ -209,7 +256,6 @@ def init_test_data():
                 referral_reason=random.choice(['病情复杂', '需要进一步检查', '康复期随访', '急性加重']),
                 status=random.choice(['PENDING', 'ACCEPTED', 'COMPLETED']),
                 is_eligible=True,
-                created_by=2,
             )
             if ref.status in ['ACCEPTED', 'COMPLETED']:
                 ref.receive_at = datetime.now() - timedelta(days=random.randint(1, 7))
@@ -222,24 +268,22 @@ def init_test_data():
         db.commit()
         print(f"  ✓ 创建了 {len(referrals)} 条转诊记录")
 
-        # 6. 创建预警记录
+        # 7. 预警记录
         print("创建预警记录...")
         alerts = []
         alert_types = ['血压异常', '血糖异常', '随访逾期', '检验异常', '用药不良反应']
         for i in range(10):
             p = patients[i % len(patients)]
-            alert = AlertRecord(
+            alerts.append(AlertRecord(
                 patient_id=p.patient_id,
                 alert_type=alert_types[i % len(alert_types)],
                 severity=random.choice(['LOW', 'MEDIUM', 'HIGH']),
-                message=f'{p.name_enc}的{"血压" if "血压" in alert_types[i % len(alert_types)] else "健康指标"}需要关注',
+                message=f'{p.name_enc}的健康指标需要关注',
                 is_handled=random.choice([True, False]),
                 handled_by=2 if random.random() > 0.5 else None,
                 created_at=datetime.now() - timedelta(days=random.randint(0, 14)),
-            )
-            alerts.append(alert)
-            db.add(alert)
-
+            ))
+        db.add_all(alerts)
         db.commit()
         print(f"  ✓ 创建了 {len(alerts)} 条预警记录")
 
@@ -250,6 +294,7 @@ def init_test_data():
         print(f"随访记录: {len(followups)}")
         print(f"转诊记录: {len(referrals)}")
         print(f"预警记录: {len(alerts)}")
+        print(f"专病记录: {len(disease_records)}")
         print("="*50)
 
     except Exception as e:
