@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from typing import Optional
 from datetime import date, datetime
-from uuid import UUID
+import uuid
 
 from app.db.session import get_db
 from app.dependencies.auth import require_roles, get_current_active_user
