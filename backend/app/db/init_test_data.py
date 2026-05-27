@@ -22,7 +22,7 @@ from app.models import (
     DiseaseStroke, DiseaseCopd, DiseaseCkd,
     FollowupHypertension, FollowupDiabetes,
 )
-from app.utils.encryption_service import encrypt_field, encrypt_name
+from app.services.encryption_service import get_encryption_service
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -113,10 +113,11 @@ def init_test_data():
         patients = []
         for pdata in patients_data:
             # 加密敏感字段
-            id_card_enc = encrypt_field(pdata['id_card'])
+            enc_svc = get_encryption_service()
+            id_card_enc = enc_svc.encrypt(pdata['id_card'])
             id_card_hash = hashlib.sha256(pdata['id_card'].encode()).hexdigest()
-            name_enc = encrypt_name(pdata['name'])
-            phone_enc = encrypt_field(pdata['phone'])
+            name_enc = enc_svc.encrypt(pdata['name'])
+            phone_enc = enc_svc.encrypt(pdata['phone'])
             
             birth_date = date.today() - timedelta(days=pdata['age'] * 365)
             village_codes = ['469028001', '469028002', '469028003', '469028004']
