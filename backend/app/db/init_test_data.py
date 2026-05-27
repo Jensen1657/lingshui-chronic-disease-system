@@ -274,13 +274,16 @@ def init_test_data():
         alert_types = ['血压异常', '血糖异常', '随访逾期', '检验异常', '用药不良反应']
         for i in range(10):
             p = patients[i % len(patients)]
+            alert_handled = random.choice([True, False])
             alerts.append(AlertRecord(
                 patient_id=p.patient_id,
+                org_code='469028',
                 alert_type=alert_types[i % len(alert_types)],
-                severity=random.choice(['LOW', 'MEDIUM', 'HIGH']),
-                message=f'{p.name_enc}的健康指标需要关注',
-                is_handled=random.choice([True, False]),
-                handled_by=2 if random.random() > 0.5 else None,
+                alert_level=random.choice(['LOW', 'MEDIUM', 'HIGH']),
+                alert_title=f'{alert_types[i % len(alert_types)]}预警',
+                alert_content=f'{p.name_enc}的健康指标需要关注',
+                is_handled=alert_handled,
+                handled_by=2 if not alert_handled else None,
                 created_at=datetime.now() - timedelta(days=random.randint(0, 14)),
             ))
         db.add_all(alerts)
