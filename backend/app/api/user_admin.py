@@ -443,6 +443,78 @@ async def list_orgs(
     }
 
 
+@router.get("/org-tree")
+async def get_org_tree(
+    current_user: SysUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取完整机构树（所有区域节点，含未设置 org_code 的节点）
+    - 返回全量区域层级树
+    - 用于前端机构选择器（树形下拉等）
+    """
+    result = await db.execute(
+        select(DimRegion).order_by(DimRegion.region_level, DimRegion.region_code)
+    )
+    all_regions = result.scalars().all()
+
+    region_list = []
+    for r in all_regions:
+        region_list.append({
+            "id": r.region_code,
+            "label": r.region_name,
+            "region_code": r.region_code,
+            "region_name": r.region_name,
+            "region_level": r.region_level,
+            "parent_code": r.parent_code,
+            "org_code": r.org_code,
+            "org_name": r.org_name,
+            "level_name": ORG_LEVELS.get(r.region_level, f"级别{r.region_level}"),
+        })
+
+    def build_tree(items, parent_code=None):
+        tree = []
+        for item in items:
+            if item["parent_code"] == parent_code:
+                children = build_tree(items, item["region_code"])
+                node = {
+                    "id": item["id"],
+                    "label": item["label"],
+                    "region_code": item["region_code"],
+                    "region_name": item["region_name"],
+                    "region_level": item["region_level"],
+                    "parent_code": item["parent_code"],
+                    "org_code": item["org_code"],
+                    "org_name": item["org_name"],
+                    "level_name": item["level_name"],
+                }
+                if children:
+                    node["children"] = children
+                tree.append(node)
+        return tree
+
+    root_nodes = [item for item in region_list if not item["parent_code"]]
+    tree = []
+    for root in root_nodes:
+        children = build_tree(region_list, root["region_code"])
+        node = {
+            "id": root["id"],
+            "label": root["label"],
+            "region_code": root["region_code"],
+            "region_name": root["region_name"],
+            "region_level": root["region_level"],
+            "parent_code": root["parent_code"],
+            "org_code": root["org_code"],
+            "org_name": root["org_name"],
+            "level_name": root["level_name"],
+        }
+        if children:
+            node["children"] = children
+        tree.append(node)
+
+    return tree
+
+
 @router.get("/roles")
 async def list_roles(
     current_user: SysUser = Depends(get_current_user),
