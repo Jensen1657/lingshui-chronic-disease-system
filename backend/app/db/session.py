@@ -37,6 +37,15 @@ def _get_factory():
     return _factory
 
 
+def __getattr__(name):
+    """惰性模块属性访问，兼容 from app.db.session import engine"""
+    if name == 'engine':
+        return _get_engine()
+    if name == '_engine':
+        return _get_engine()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 async def get_db() -> AsyncSession:
     """FastAPI 依赖注入：yield 一个异步数据库会话"""
     factory = _get_factory()
