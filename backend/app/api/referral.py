@@ -30,37 +30,32 @@ router = APIRouter()
 
 # ---------- CRUD ----------
 
-@router.post("/")
+@router.post("/", response_model=ReferralResponse, status_code=201, dependencies=[Depends(require_roles("ADMIN", "DOCTOR"))])
 async def create_referral(
-    patient_id: str,
-    disease_code: str,
-    referral_type: str,
-    apply_org_code: str,
-    receive_org_code: Optional[str] = None,
-    referral_reason: Optional[str] = None,
+    data: ReferralCreate,
     db: AsyncSession = Depends(get_db),
 ):
     """创建双向转诊（含资格校验）"""
     # 资格校验
-    check = await ReferralService.check_eligibility(db, patient_id, disease_code, referral_type)
+    check = await ReferralService.check_eligibility(db, data.patient_id, data.disease_code, data.referral_type)
     if not check["is_eligible"]:
         raise HTTPException(status_code=400, detail=f"不符合转诊条件: {check['reason']}")
 
     # 验证患者
     patient = (await db.execute(
-        select(Patient).where(Patient.patient_id == patient_id)
+        select(Patient).where(Patient.patient_id == data.patient_id)
     )).scalar_one_or_none()
     if not patient:
         raise HTTPException(status_code=404, detail="患者不存在")
 
     referral = ReferralRecord(
-        referral_id=str(__import__("uuid").uuid4()),
-        patient_id=patient_id,
-        disease_code=disease_code,
-        referral_type=referral_type,
-        apply_org_code=apply_org_code,
-        receive_org_code=receive_org_code or "",
-        referral_reason=referral_reason,
+        referral_id=str(uuid.uuid4()),
+        patient_id=data.patient_id,
+        disease_code=data.disease_code,
+        referral_type=data.referral_type,
+        apply_org_code=data.apply_org_code,
+        receive_org_code=data.receive_org_code or "",
+        referral_reason=data.referral_reason,
         match_criteria=check.get("match_criteria", {}),
         is_eligible=True,
         status="PENDING",
