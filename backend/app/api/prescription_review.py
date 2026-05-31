@@ -247,26 +247,26 @@ async def get_prescription_review_stats(
 
 AI_DRUG_DB = [
     {"disease": "HYPERTENSION", "classes": [
-        {"class": "CCB", "examples": ["硝苯地平", "氨氯地平", "左旋氨氯地平"], "first_line": True},
-        {"class": "ACEI", "examples": ["依那普利", "贝那普利", "培哚普利"], "first_line": True},
-        {"class": "ARB", "examples": ["缬沙坦", "厄贝沙坦", "坎地沙坦"], "first_line": True},
-        {"class": "β-blocker", "examples": ["美托洛尔", "比索洛尔"], "first_line": False},
-        {"class": "Diuretics", "examples": ["氢氯噻嗪", "吲达帕胺"], "first_line": False},
+        {"class": "CCB", "class_cn": "CCB类", "examples": ["硝苯地平", "氨氯地平", "左旋氨氯地平"], "first_line": True},
+        {"class": "ACEI", "class_cn": "ACEI类", "examples": ["依那普利", "贝那普利", "培哚普利"], "first_line": True},
+        {"class": "ARB", "class_cn": "ARB类", "examples": ["缬沙坦", "厄贝沙坦", "坎地沙坦"], "first_line": True},
+        {"class": "β-blocker", "class_cn": "β受体阻滞剂", "examples": ["美托洛尔", "比索洛尔"], "first_line": False},
+        {"class": "Diuretics", "class_cn": "利尿剂", "examples": ["氢氯噻嗪", "吲达帕胺"], "first_line": False},
     ]},
     {"disease": "DIABETES", "classes": [
-        {"class": "Metformin", "examples": ["二甲双胍"], "first_line": True},
-        {"class": "Sulfonylurea", "examples": ["格列美脲", "格列齐特"], "first_line": True},
-        {"class": "DPP-4i", "examples": ["西格列汀", "沙格列汀"], "first_line": True},
-        {"class": "SGLT2i", "examples": ["达格列净", "恩格列净"], "first_line": True},
-        {"class": "GLP-1RA", "examples": ["利拉鲁肽", "司美格鲁肽"], "first_line": False},
-        {"class": "Insulin", "examples": ["甘精胰岛素", "门冬胰岛素"], "first_line": False},
+        {"class": "Metformin", "class_cn": "双胍类", "examples": ["二甲双胍"], "first_line": True},
+        {"class": "Sulfonylurea", "class_cn": "磺脲类", "examples": ["格列美脲", "格列齐特", "格列吡嗪"], "first_line": True},
+        {"class": "DPP-4i", "class_cn": "DPP-4抑制剂", "examples": ["西格列汀", "沙格列汀"], "first_line": True},
+        {"class": "SGLT2i", "class_cn": "SGLT-2抑制剂", "examples": ["达格列净", "恩格列净"], "first_line": True},
+        {"class": "GLP-1RA", "class_cn": "GLP-1受体激动剂", "examples": ["利拉鲁肽", "司美格鲁肽"], "first_line": False},
+        {"class": "Insulin", "class_cn": "胰岛素", "examples": ["甘精胰岛素", "门冬胰岛素"], "first_line": False},
     ]},
     {"disease": "CHD", "classes": [
-        {"class": "Statin", "examples": ["阿托伐他汀", "瑞舒伐他汀", "辛伐他汀"], "first_line": True},
-        {"class": "Antiplatelet", "examples": ["阿司匹林", "氯吡格雷"], "first_line": True},
-        {"class": "Beta-blocker", "examples": ["美托洛尔"], "first_line": True},
-        {"class": "ACEI/ARB", "examples": ["培哚普利", "缬沙坦"], "first_line": True},
-        {"class": "Nitrate", "examples": ["单硝酸异山梨酯"], "first_line": False},
+        {"class": "Statin", "class_cn": "他汀类", "examples": ["阿托伐他汀", "瑞舒伐他汀", "辛伐他汀"], "first_line": True},
+        {"class": "Antiplatelet", "class_cn": "抗血小板", "examples": ["阿司匹林", "氯吡格雷"], "first_line": True},
+        {"class": "Beta-blocker", "class_cn": "β受体阻滞剂", "examples": ["美托洛尔"], "first_line": True},
+        {"class": "ACEI/ARB", "class_cn": "ACEI/ARB类", "examples": ["培哚普利", "缬沙坦"], "first_line": True},
+        {"class": "Nitrate", "class_cn": "硝酸酯类", "examples": ["单硝酸异山梨酯"], "first_line": False},
     ]},
 ]
 
@@ -349,18 +349,27 @@ async def ai_prescription_recommend(
 
         if matching_class:
             used_classes = [m["drug_class"] for m in current_meds if m.get("drug_class")]
+            used_drug_names_lower = [m["drug_name"].lower() for m in current_meds] if current_meds else []
             first_line = [c for c in matching_class["classes"] if c["first_line"]]
-            missing = [c for c in first_line if c["class"] not in used_classes]
+            # 同时匹配英文类名、中文类名、以及药物名
+            missing = [
+                c for c in first_line
+                if c["class"] not in used_classes
+                and c.get("class_cn") not in used_classes
+                and not any(e.lower() in un for e in c["examples"] for un in used_drug_names_lower)
+            ]
 
             if missing:
                 for m_cls in missing:
+                    cn_label = m_cls.get("class_cn", m_cls["class"])
                     confidence = 0.85 if len(disease_list) == 1 else 0.70
                     recommendations.append({
                         "type": "ADD",
                         "disease_code": disease,
                         "drug_class": m_cls["class"],
+                        "class_cn": cn_label,
                         "suggested_drugs": m_cls["examples"],
-                        "reason": f"{disease} 核心治疗推荐，当前未使用{m_cls['class']}类药物",
+                        "reason": f"{disease} 核心治疗推荐，当前未使用{cn_label}药物",
                         "confidence": confidence,
                         "evidence_level": "A" if m_cls["first_line"] else "B",
                     })
