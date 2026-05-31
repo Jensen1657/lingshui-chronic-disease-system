@@ -24,6 +24,7 @@ from app.utils.cache import get as cache_get, set as cache_set, invalidate, DASH
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/", response_model=TcmResponse, status_code=201)
 async def create_tcm_record(
         tcm: TcmCreate,
@@ -76,6 +77,7 @@ async def create_tcm_record(
     return db_tcm
 
 
+@router.get("")
 @router.get("/")
 async def list_tcm_records(
         patient_id: Optional[str] = Query(None),

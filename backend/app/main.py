@@ -53,6 +53,10 @@ async def health_check():
 # 根路径
 @app.get("/")
 async def root():
+    frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    index_file = frontend_dist / "index.html"
+    if index_file.exists():
+        return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
     return {
         "system": "慢性病管理系统",
         "version": "1.0.0",
@@ -115,24 +119,36 @@ app.include_router(audit_log.router, prefix="/api/v1/audit-logs")
 from app.api import user_admin
 app.include_router(user_admin.router, prefix="/api/v1/admin", tags=["用户管理"])
 
-# 所有后端 API 路由已注册完毕
+# 会议纪要新功能路由
+from app.api import medication, health_education, prescription_review, risk_assessment
+from app.api.disease import router as disease_router
+from app.api.performance import router as performance_router
+app.include_router(medication.router, prefix="/api/v1/medications", tags=["用药记录"])
+app.include_router(health_education.router, prefix="/api/v1/health-education", tags=["健康宣教"])
+app.include_router(prescription_review.router, prefix="/api/v1/prescription-reviews", tags=["处方审核"])
+app.include_router(risk_assessment.router, prefix="/api/v1/risk-assessment", tags=["风险评估"])
+app.include_router(disease_router, prefix="/api/v1", tags=["专病管理"])
+app.include_router(performance_router, prefix="/api/v1", tags=["绩效考核"])
 
-# ============ 前端静态文件服务（生产环境） ============
+# ============ 前端静态文件服务 ============
 import os
-if os.getenv("ENVIRONMENT") == "production":
-    # 前端构建产物目录（相对于 backend/）
-    frontend_dist = Path(__file__).parent.parent / "frontend" / "dist"
-    if frontend_dist.exists():
-        # 服务静态文件（JS/CSS/图片等）
-        app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
-        
-        # SPA 兜底：所有其他 GET 请求返回 index.html
-        @app.get("/{full_path:path}")
-        async def serve_spa(full_path: str):
-            index_file = frontend_dist / "index.html"
-            if index_file.exists():
-                return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
-            return {"error": "前端未构建，请运行 npm run build"}
+# 前端构建产物目录（相对于 backend/）
+frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if frontend_dist.exists():
+    # 服务静态文件（JS/CSS/图片等）
+    app.mount("/assets", StaticFiles(directory=frontend_dist / "assets"), name="assets")
+    
+    # SPA 兜底：非 API 的 GET 请求返回 index.html
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # 排除 API 路径（避免捕获 /api/v1/* 的 GET 请求）
+        if full_path.startswith("api/"):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": f"API 端点不存在: /{full_path}"}, status_code=404)
+        index_file = frontend_dist / "index.html"
+        if index_file.exists():
+            return HTMLResponse(content=index_file.read_text(encoding="utf-8"))
+        return {"error": "前端未构建，请运行 npm run build"}
 
 if __name__ == "__main__":
     import uvicorn

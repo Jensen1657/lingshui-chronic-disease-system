@@ -22,6 +22,7 @@ from app.utils.cache import get as cache_get, set as cache_set, invalidate, DASH
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/", response_model=AssessmentResponse, status_code=201)
 async def create_assessment(
         assessment: AssessmentCreate,
@@ -80,6 +81,7 @@ async def create_assessment(
     return db_assessment
 
 
+@router.get("")
 @router.get("/")
 async def list_assessments(
         patient_id: Optional[str] = Query(None),

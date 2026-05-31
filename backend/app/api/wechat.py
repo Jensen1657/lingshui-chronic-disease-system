@@ -34,6 +34,7 @@ def format_wechat(wechat):
     }
 
 
+@router.post("")
 @router.post("/", status_code=201)
 async def create_wechat_binding(
         wechat: WechatCreate,
@@ -89,6 +90,7 @@ async def create_wechat_binding(
     return format_wechat(db_wechat)
 
 
+@router.get("")
 @router.get("/")
 async def list_wechat_bindings(
         patient_id: Optional[UUID] = Query(None),

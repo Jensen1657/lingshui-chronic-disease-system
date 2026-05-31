@@ -22,6 +22,7 @@ from app.utils.cache import get as cache_get, set as cache_set, invalidate, inva
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/", response_model=PatientResponse, status_code=201, dependencies=[Depends(require_roles('ADMIN', 'DOCTOR', 'NURSE'))])
 async def create_patient(
         patient: PatientCreate,
@@ -78,6 +79,7 @@ async def create_patient(
     return db_patient
 
 
+@router.get("")
 @router.get("/", response_model=PatientPaginatedResponse, dependencies=[Depends(require_roles('ADMIN', 'DOCTOR', 'NURSE'))])
 async def list_patients(
         skip: int = Query(0, ge=0),

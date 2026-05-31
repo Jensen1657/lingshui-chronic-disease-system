@@ -306,6 +306,74 @@ const router = createRouter({
       name: 'QualityControl',
       component: () => import('@/views/QualityControl.vue'),
       meta: { title: '质量控制', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    // 会议纪要新功能
+    // 专病管理页（6种慢病）
+    {
+      path: '/disease/hypertension',
+      name: 'DiseaseHypertension',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '高血压专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/disease/diabetes',
+      name: 'DiseaseDiabetes',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '糖尿病专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/disease/chd',
+      name: 'DiseaseCHD',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '冠心病专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/disease/stroke',
+      name: 'DiseaseStroke',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '脑卒中专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/disease/copd',
+      name: 'DiseaseCOPD',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '慢阻肺专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/disease/ckd',
+      name: 'DiseaseCKD',
+      component: () => import('@/views/DiseaseDetail.vue'),
+      meta: { title: '慢性肾脏病专病管理', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/medications',
+      name: 'Medications',
+      component: () => import('@/views/MedicationList.vue'),
+      meta: { title: '用药记录', requiresAuth: true }
+    },
+    {
+      path: '/health-education',
+      name: 'HealthEducation',
+      component: () => import('@/views/HealthEducation.vue'),
+      meta: { title: '健康宣教', requiresAuth: true }
+    },
+    {
+      path: '/risk-assessment',
+      name: 'RiskAssessment',
+      component: () => import('@/views/RiskAssessment.vue'),
+      meta: { title: '风险评估', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
+    },
+    {
+      path: '/performance',
+      name: 'Performance',
+      component: () => import('@/views/PerformanceView.vue'),
+      meta: { title: '绩效考核', requiresAuth: true, roles: ['ADMIN', 'DOCTOR', 'NURSE'] },
+    },
+    {
+      path: '/prescription-reviews',
+      name: 'PrescriptionReviews',
+      component: () => import('@/views/PrescriptionReview.vue'),
+      meta: { title: '处方指导', requiresAuth: true, roles: ['ADMIN', 'DOCTOR'] }
     }
   ]
 })

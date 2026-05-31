@@ -1,4 +1,5 @@
 """Application configuration."""
+from __future__ import annotations
 import os
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,7 +22,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 30
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY", "0" * 64)
-    CORS_ORIGINS: list[str] = ["*"]
+    CORS_ORIGINS: list = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",

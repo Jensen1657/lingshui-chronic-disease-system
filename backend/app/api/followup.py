@@ -24,6 +24,7 @@ from app.utils.cache import get as cache_get, set as cache_set, invalidate, DASH
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/", response_model=FollowupResponse, status_code=201, dependencies=[Depends(require_roles('ADMIN', 'DOCTOR', 'NURSE'))])
 async def create_followup(
         followup: FollowupCreate,
@@ -97,6 +98,7 @@ async def create_followup(
     return db_followup
 
 
+@router.get("")
 @router.get("/", dependencies=[Depends(require_roles("ADMIN", "DOCTOR", "NURSE"))])
 async def list_followups(
         patient_id: Optional[str] = Query(None),

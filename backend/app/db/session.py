@@ -37,12 +37,19 @@ def _get_factory():
     return _factory
 
 
+def async_session_factory():
+    """公开的异步会话工厂（供中间件等模块使用）"""
+    return _get_factory()()
+
+
 def __getattr__(name):
     """惰性模块属性访问，兼容 from app.db.session import engine"""
     if name == 'engine':
         return _get_engine()
     if name == '_engine':
         return _get_engine()
+    if name == 'async_session_factory':
+        return _get_factory
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

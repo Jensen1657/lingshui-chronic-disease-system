@@ -44,8 +44,26 @@
           <span>📝 年度评估</span>
         </el-menu-item>
         
+        <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR', 'NURSE'])" index="/medications">
+          <span>💊 用药记录</span>
+        </el-menu-item>
+        
+        <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR', 'NURSE'])" index="/health-education">
+          <span>📚 健康宣教</span>
+        </el-menu-item>
+        
+        <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR'])" index="/risk-assessment">
+          <span>🎯 风险评估</span>
+        </el-menu-item>
+        
+        <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR'])" index="/prescription-reviews">
+          <span>📝 处方指导</span>
+        </el-menu-item>
+        
         <el-menu-item index="/alerts">
-          <span>🔔 预警中心</span>
+          <el-badge :value="alertPolling.unreadCriticalCount.value" :hidden="!alertPolling.unreadCriticalCount.value" class="alert-badge">
+            <span>🔔 预警中心</span>
+          </el-badge>
         </el-menu-item>
         
         <el-sub-menu v-if="canAccess(['ADMIN', 'DOCTOR', 'NURSE'])" index="tcm">
@@ -80,6 +98,10 @@
         
         <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR'])" index="/quality-control">
           <span>✅ 质量控制</span>
+        </el-menu-item>
+
+        <el-menu-item v-if="canAccess(['ADMIN', 'DOCTOR', 'NURSE'])" index="/performance">
+          <span>🏆 绩效考核</span>
         </el-menu-item>
         
         <el-menu-item v-if="canAccess(['ADMIN'])" index="/users/manage">
@@ -128,13 +150,24 @@
       </el-main>
     </el-container>
   </el-container>
-</template>
+
+    <!-- 主动弹窗预警通知 -->
+    <AlertNotification
+      :show="alertPolling.showPopup.value"
+      :alert="alertPolling.popupAlert.value"
+      :count="alertPolling.unreadCriticalCount.value"
+      @dismiss="alertPolling.dismissPopup()"
+      @click="alertPolling.goToAlerts()"
+    />
+  </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import GlobalSearch from '@/components/GlobalSearch.vue'
+import AlertNotification from '@/components/AlertNotification.vue'
+import { useAlertPolling } from '@/composables/useAlertPolling'
 
 type UserRole = 'ADMIN' | 'DOCTOR' | 'NURSE' | 'VIEWER'
 
@@ -162,10 +195,15 @@ const pageTitles: Record<string, string> = {
   '/reminders': '随访提醒',
   '/wechat': '微信绑定',
   '/county-township': '县乡协同',
+  '/medications': '用药记录',
+  '/health-education': '健康宣教',
+  '/risk-assessment': '风险评估',
+  '/prescription-reviews': '处方指导',
   '/scoring-tools': '评分工具',
   '/quality-control': '质量控制',
   '/users/manage': '用户管理',
   '/audit-logs': '操作审计',
+  '/performance': '绩效考核',
 }
 
 const currentPageTitle = computed(() => pageTitles[route.path] || '慢病管理系统')
@@ -180,6 +218,9 @@ const roleLabel = computed(() => {
   }
   return labels[userRole.value] || '用户'
 })
+
+// ===== 主动弹窗预警 =====
+const alertPolling = useAlertPolling()
 
 // 初始化用户状态
 onMounted(() => {

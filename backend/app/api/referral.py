@@ -30,6 +30,7 @@ router = APIRouter()
 
 # ---------- CRUD ----------
 
+@router.post("")
 @router.post("/", response_model=ReferralResponse, status_code=201, dependencies=[Depends(require_roles("ADMIN", "DOCTOR"))])
 async def create_referral(
     data: ReferralCreate,
@@ -69,6 +70,7 @@ async def create_referral(
     return referral
 
 
+@router.get("")
 @router.get("/", dependencies=[Depends(require_roles("ADMIN", "DOCTOR"))])
 async def list_referrals(
     patient_id: Optional[str] = None,

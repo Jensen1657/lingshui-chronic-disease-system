@@ -11,6 +11,10 @@ from datetime import datetime
 import uuid
 
 from app.db.session import Base
+from app.models.meeting_models import (
+    PatientMedication, HealthEducationTemplate, HealthEducationRecord,
+    PrescriptionReview, PatientRiskAssessment,
+)
 
 
 class DimRegion(Base):

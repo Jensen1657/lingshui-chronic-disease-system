@@ -1,9 +1,15 @@
 """质控校验 API"""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.dependencies.auth import get_current_active_user
 from app.services.quality_control import QualityControlService
+from app.db.session import get_db
+from app.models import (
+    Patient, FollowupRecord, FollowupReminder, PatientMedication
+)
 
 router = APIRouter(tags=["质控校验"])  # prefix 由 main.py 添加
 
@@ -160,3 +166,101 @@ async def get_referral_criteria(
                 result[rt] = {disease_type: rc[disease_type]}
         criteria = result
     return criteria
+
+
+# ===== 会议纪要：质控指标体系 =====
+@router.get("/metrics/followup-rate")
+async def get_followup_rate_metrics(
+    org_code: Optional[str] = None,
+    period_type: Optional[str] = "month",
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_active_user),
+):
+    """随访率考核指标"""
+    q = select(func.count(FollowupRecord.followup_id))
+    planned_q = select(func.count(FollowupReminder.reminder_id))
+    if org_code:
+        q = q.where(FollowupRecord.org_code == org_code)
+        planned_q = planned_q.where(FollowupReminder.patient_id.in_(
+            select(Patient.patient_id).where(Patient.manage_org_code == org_code)
+        ))
+    done = (await db.execute(q)).scalar() or 0
+    planned = (await db.execute(planned_q)).scalar() or 0
+    return {
+        "metric": "followup_rate", "org_code": org_code,
+        "followup_done": done, "followup_planned": planned,
+        "rate": round(done / max(planned, 1) * 100, 1),
+    }
+
+
+@router.get("/metrics/medication-compliance")
+async def get_medication_compliance_metrics(
+    org_code: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_active_user),
+):
+    """用药依从率考核指标"""
+    q = select(func.count(PatientMedication.medication_id))
+    if org_code:
+        q = q.where(PatientMedication.prescribed_org == org_code)
+    total = (await db.execute(q)).scalar() or 0
+    good_q = select(func.count(PatientMedication.medication_id)).where(
+        PatientMedication.adherence_status == "GOOD"
+    )
+    if org_code:
+        good_q = good_q.where(PatientMedication.prescribed_org == org_code)
+    good = (await db.execute(good_q)).scalar() or 0
+    return {
+        "metric": "medication_compliance", "org_code": org_code,
+        "total_prescriptions": total, "good_adherence": good,
+        "compliance_rate": round(good / max(total, 1) * 100, 1),
+    }
+
+
+@router.get("/metrics/followup-quality")
+async def get_followup_quality_metrics(
+    org_code: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    _=Depends(get_current_active_user),
+):
+    """随访质量率考核指标 - 6个月内规范随访比例"""
+    # 统计有随访的患者数
+    q_total = select(func.count(func.distinct(FollowupRecord.patient_id)))
+    if org_code:
+        q_total = q_total.where(FollowupRecord.org_code == org_code)
+    patients_with_fu = (await db.execute(q_total)).scalar() or 0
+
+    # 统计近6个月有随访 + 12个月内有年度评估的患者 = 规范随访
+    try:
+        q_quality = text("""
+            SELECT COUNT(DISTINCT fr.patient_id)
+            FROM followup_record fr
+            WHERE fr.followup_date >= date('now', '-6 months')
+            AND fr.patient_id IN (
+                SELECT patient_id FROM annual_assessment
+                WHERE assessed_at >= date('now', '-12 months')
+            )
+        """)
+        if org_code:
+            q_quality = text("""
+                SELECT COUNT(DISTINCT fr.patient_id)
+                FROM followup_record fr
+                WHERE fr.followup_date >= date('now', '-6 months')
+                AND fr.org_code = :org_code
+                AND fr.patient_id IN (
+                    SELECT patient_id FROM annual_assessment
+                    WHERE assessed_at >= date('now', '-12 months')
+                )
+            """)
+            quality_count = (await db.execute(q_quality, {"org_code": org_code})).scalar() or 0
+        else:
+            quality_count = (await db.execute(q_quality)).scalar() or 0
+    except Exception:
+        quality_count = patients_with_fu  # 降级: 有随访即算
+
+    return {
+        "metric": "followup_quality", "org_code": org_code,
+        "patients_with_followup": patients_with_fu,
+        "quality_followup_patients": quality_count,
+        "quality_rate": round(quality_count / max(patients_with_fu, 1) * 100, 1),
+    }

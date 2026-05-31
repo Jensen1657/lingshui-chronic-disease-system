@@ -35,6 +35,7 @@ def format_reminder(reminder):
     }
 
 
+@router.post("")
 @router.post("/", status_code=201)
 async def create_reminder(
         reminder: ReminderCreate,
@@ -68,6 +69,7 @@ async def create_reminder(
     return format_reminder(db_reminder)
 
 
+@router.get("")
 @router.get("/")
 async def list_reminders(
         patient_id: Optional[UUID] = Query(None),

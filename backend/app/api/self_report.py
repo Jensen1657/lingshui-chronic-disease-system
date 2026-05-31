@@ -41,6 +41,7 @@ def format_self_report(report):
     }
 
 
+@router.post("")
 @router.post("/", status_code=201)
 async def create_self_report(
         report: SelfReportCreate,
@@ -82,6 +83,7 @@ async def create_self_report(
     return format_self_report(db_report)
 
 
+@router.get("")
 @router.get("/")
 async def list_self_reports(
         patient_id: Optional[UUID] = Query(None),

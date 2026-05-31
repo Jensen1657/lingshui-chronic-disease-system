@@ -12,11 +12,13 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AlertForm: typeof import('./components/AlertForm.vue')['default']
+    AlertNotification: typeof import('./components/AlertNotification.vue')['default']
     AppLayout: typeof import('./components/AppLayout.vue')['default']
     AssessmentForm: typeof import('./components/AssessmentForm.vue')['default']
     ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
+    ElBadge: typeof import('element-plus/es')['ElBadge']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
     ElCascader: typeof import('element-plus/es')['ElCascader']

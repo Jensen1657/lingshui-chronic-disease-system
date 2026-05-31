@@ -22,6 +22,7 @@ from app.utils.cache import get as cache_get, set as cache_set, invalidate, DASH
 router = APIRouter()
 
 
+@router.post("")
 @router.post("/", response_model=AlertResponse, status_code=201)
 async def create_alert(
         alert: AlertCreate,
@@ -50,6 +51,7 @@ async def create_alert(
     return db_alert
 
 
+@router.get("")
 @router.get("/")
 async def list_alerts(
         patient_id: Optional[str] = Query(None),
