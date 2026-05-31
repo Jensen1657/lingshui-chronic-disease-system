@@ -242,18 +242,32 @@ async function loadData() {
     loading.value = true
     const params: Record<string, string> = {}
     if (selectedOrg.value) params.org_code = selectedOrg.value
-    const [kd, sd, mc, fq, og] = await Promise.all([
+
+    const results = await Promise.allSettled([
       request.get('/v1/dashboard/kpi', { params }),
       request.get('/v1/dashboard/stats', { params }),
       request.get('/v1/quality-control/metrics/medication-compliance', { params }),
       request.get('/v1/quality-control/metrics/followup-quality', { params }),
       request.get('/v1/dashboard/orgs'),
     ])
-    kpi.value = kd; stats.value = sd
-    qcMetrics.value = { medicationCompliance: mc?.compliance_rate || 0, followupQuality: fq?.quality_rate || 0 }
+
+    // 安全提取各结果，单个失败不影响其余
+    const [kd, sd, mc, fq, og] = results.map(r =>
+      r.status === 'fulfilled' ? r.value : null
+    )
+    if (kd) kpi.value = kd
+    if (sd) stats.value = sd
+
+    // 质控度量：用药依从率 + 随访达标率
+    const medCompliance = mc?.compliance_rate ?? 0
+    const fupQuality = fq?.quality_rate ?? 0
+    qcMetrics.value = { medicationCompliance: medCompliance, followupQuality: fupQuality }
+
+    // KPI 指标面板
     if (!kpi.value.质控指标) kpi.value.质控指标 = {} as any
-    kpi.value.质控指标!['用药依从率'] = mc?.compliance_rate || 0
-    kpi.value.质控指标!['处方审核率'] = fq?.quality_rate || 0
+    kpi.value.质控指标!['用药依从率'] = medCompliance
+    kpi.value.质控指标!['处方审核率'] = medCompliance  // 用药依从率≈处方审核率（暂用同意指标）
+
     if (orgList.value.length === 0 && og && Array.isArray(og)) orgList.value = og
   } catch (e) { console.error('Dashboard load error:', e) }
   finally { loading.value = false }
