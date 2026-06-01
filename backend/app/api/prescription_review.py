@@ -268,14 +268,36 @@ AI_DRUG_DB = [
         {"class": "ACEI/ARB", "class_cn": "ACEI/ARB类", "examples": ["培哚普利", "缬沙坦"], "first_line": True},
         {"class": "Nitrate", "class_cn": "硝酸酯类", "examples": ["单硝酸异山梨酯"], "first_line": False},
     ]},
+    {"disease": "STROKE", "classes": [
+        {"class": "Antiplatelet", "class_cn": "抗血小板", "examples": ["阿司匹林", "氯吡格雷"], "first_line": True},
+        {"class": "Statin", "class_cn": "他汀类", "examples": ["阿托伐他汀", "瑞舒伐他汀"], "first_line": True},
+        {"class": "ACEI/ARB", "class_cn": "ACEI/ARB类", "examples": ["培哚普利", "缬沙坦"], "first_line": True},
+        {"class": "Neuroprotective", "class_cn": "神经保护剂", "examples": ["胞磷胆碱", "丁苯酞", "依达拉奉"], "first_line": True},
+    ]},
+    {"disease": "COPD", "classes": [
+        {"class": "LAMA", "class_cn": "长效抗胆碱药", "examples": ["噻托溴铵"], "first_line": True},
+        {"class": "LABA+ICS", "class_cn": "长效β激动剂+激素", "examples": ["沙美特罗替卡松", "布地奈德福莫特罗"], "first_line": True},
+        {"class": "SABA", "class_cn": "短效β激动剂(急救)", "examples": ["沙丁胺醇"], "first_line": True},
+        {"class": "Theophylline", "class_cn": "茶碱类", "examples": ["氨茶碱", "多索茶碱"], "first_line": False},
+    ]},
+    {"disease": "CKD", "classes": [
+        {"class": "ACEI/ARB", "class_cn": "ACEI/ARB类(肾保护)", "examples": ["缬沙坦", "厄贝沙坦"], "first_line": True},
+        {"class": "SGLT2i", "class_cn": "SGLT-2抑制剂(肾保护)", "examples": ["达格列净", "恩格列净"], "first_line": True},
+        {"class": "Erythropoietin", "class_cn": "促红细胞生成素", "examples": ["重组人促红细胞生成素"], "first_line": False},
+        {"class": "Iron", "class_cn": "铁剂", "examples": ["琥珀酸亚铁", "蔗糖铁"], "first_line": False},
+        {"class": "PhosphateBinder", "class_cn": "磷结合剂", "examples": ["碳酸钙", "司维拉姆"], "first_line": False},
+    ]},
 ]
 
 DRUG_CONTRAINDICATIONS = {
-    "二甲双胍": {"condition": "eGFR < 30 (CKD 4-5期)", "severity": "HIGH"},
+    "二甲双胍": {"condition": "eGFR < 30 (CKD 4-5期)", "severity": "HIGH", "disease": "CKD"},
     "ACEI": {"condition": "血钾>5.5mmol/L 或双侧肾动脉狭窄", "severity": "HIGH"},
     "ARB": {"condition": "血钾>5.5mmol/L 或双侧肾动脉狭窄", "severity": "HIGH"},
     "阿司匹林": {"condition": "活动性消化道溃疡", "severity": "MEDIUM"},
     "华法林": {"condition": "未监测INR", "severity": "HIGH"},
+    "β受体阻滞剂": {"condition": "慢阻肺急性加重期可能诱发支气管痉挛", "severity": "MEDIUM", "disease": "COPD"},
+    "NSAIDs": {"condition": "CKD患者可能加重肾损伤", "severity": "HIGH", "disease": "CKD"},
+    "氨茶碱": {"condition": "严重肝病/心力衰竭需减量", "severity": "LOW"},
 }
 
 SAME_CLASS_WARN = [("ACEI", "ARB"), ("CCB", "Diuretics")]
@@ -376,19 +398,23 @@ async def ai_prescription_recommend(
 
     # 2. 检查药物相互作用警告
     used_drug_names = [m["drug_name"] for m in current_meds]
+    used_drug_classes = [m.get("drug_class", "") for m in current_meds]
+    dl = disease_list
     for drug_name, info in DRUG_CONTRAINDICATIONS.items():
-        if drug_name in used_drug_names or any(drug_name in m.get("drug_class", "") for m in current_meds):
-            if patient.disease_list:
-                import json as j2
-                dl = json.loads(patient.disease_list) if isinstance(patient.disease_list, str) else patient.disease_list
-                if "CKD" in dl and drug_name == "二甲双胍":
-                    warnings.append({
-                        "type": "CONTRAINDICATION",
-                        "drug": drug_name,
-                        "condition": "CKD",
-                        "severity": "HIGH",
-                        "message": f"患者合并CKD，{drug_name}使用需评估肾功能(eGFR)",
-                    })
+        # match drug name OR drug class
+        name_match = drug_name in used_drug_names
+        class_match = any(drug_name in cls for cls in used_drug_classes)
+        if name_match or class_match:
+            restriction_disease = info.get("disease", "")
+            # If drug restricted for a disease that patient has, warn
+            if restriction_disease and restriction_disease in dl:
+                warnings.append({
+                    "type": "CONTRAINDICATION",
+                    "drug": drug_name,
+                    "condition": restriction_disease,
+                    "severity": info["severity"],
+                    "message": f"患者合并{restriction_disease}，{drug_name}需谨慎: {info['condition']}",
+                })
 
     # 3. 检查血压/血糖达标情况
     if latest_fu:
